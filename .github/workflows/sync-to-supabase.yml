@@ -1,0 +1,91 @@
+name: Sync Tokens to Supabase
+
+on:
+  push:
+    paths:
+      - 'tokens.json'
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Sync to Supabase
+        uses: actions/github-script@v6
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read tokens file
+            const tokens = JSON.parse(fs.readFileSync('tokens.json', 'utf8'));
+            
+            // Simple function to flatten tokens
+            function flattenTokens(obj, prefix = '', category = '') {
+              let result = [];
+              
+              for (const [key, value] of Object.entries(obj)) {
+                if (key.startsWith('$')) continue; // Skip metadata
+                
+                const fullName = prefix ? `${prefix}-${key}` : key;
+                
+                if (value && typeof value === 'object' && 'value' in value) {
+                  // This is a token
+                  result.push({
+                    token_name: fullName,
+                    token_value: value.value,
+                    token_type: value.type || 'unknown',
+                    category: category || prefix || 'global',
+                    css_variable: `--${fullName.replace(/\s+/g, '-').toLowerCase()}`,
+                    description: value.description || null
+                  });
+                } else if (value && typeof value === 'object') {
+                  // Nested object, recurse
+                  result = result.concat(flattenTokens(value, fullName, key));
+                }
+              }
+              
+              return result;
+            }
+            
+            // Flatten all tokens
+            const flatTokens = flattenTokens(tokens);
+            
+            // Send to Supabase - using your table structure
+            const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/design_tokens?on_conflict=token_name`, {
+              method: 'POST',
+              headers: {
+                'apikey': process.env.SUPABASE_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify(flatTokens)
+            });
+            
+            if (!response.ok) {
+              const error = await response.text();
+              throw new Error(`Supabase sync failed: ${error}`);
+            }
+            
+            console.log(`✅ Synced ${flatTokens.length} tokens to Supabase`);
+            
+            // Log to sync_logs if you have that table
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/sync_logs`, {
+              method: 'POST',
+              headers: {
+                'apikey': process.env.SUPABASE_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                status: 'success',
+                message: `Synced ${flatTokens.length} design tokens`
+              })
+            });
