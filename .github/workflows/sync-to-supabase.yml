@@ -26,7 +26,7 @@ jobs:
             // Read tokens file
             const tokens = JSON.parse(fs.readFileSync('tokens.json', 'utf8'));
             
-            // Simple function to flatten tokens
+            // Function to flatten tokens - UPDATED for $value and $type
             function flattenTokens(obj, prefix = '', category = '') {
               let result = [];
               
@@ -35,12 +35,16 @@ jobs:
                 
                 const fullName = prefix ? `${prefix}-${key}` : key;
                 
-                if (value && typeof value === 'object' && 'value' in value) {
+                // Check for both $value and value (for compatibility)
+                const tokenValue = value?.$value || value?.value;
+                const tokenType = value?.$type || value?.type;
+                
+                if (value && typeof value === 'object' && tokenValue) {
                   // This is a token
                   result.push({
                     token_name: fullName,
-                    token_value: value.value,
-                    token_type: value.type || 'unknown',
+                    token_value: tokenValue,
+                    token_type: tokenType || 'unknown',
                     category: category || prefix || 'global',
                     css_variable: `--${fullName.replace(/\s+/g, '-').toLowerCase()}`,
                     description: value.description || null
@@ -56,36 +60,30 @@ jobs:
             
             // Flatten all tokens
             const flatTokens = flattenTokens(tokens);
+            console.log(`Found ${flatTokens.length} tokens to sync`);
+            console.log('Sample tokens:', JSON.stringify(flatTokens.slice(0, 3), null, 2));
             
-            // Send to Supabase - using your table structure
-            const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/design_tokens?on_conflict=token_name`, {
+            if (flatTokens.length === 0) {
+              console.log('WARNING: No tokens found to sync!');
+              return;
+            }
+            
+            // Send to Supabase
+            const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/design_tokens`, {
               method: 'POST',
               headers: {
                 'apikey': process.env.SUPABASE_KEY,
                 'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
-                'Prefer': 'resolution=merge-duplicates'
+                'Prefer': 'return=representation'
               },
               body: JSON.stringify(flatTokens)
             });
             
+            const responseText = await response.text();
+            
             if (!response.ok) {
-              const error = await response.text();
-              throw new Error(`Supabase sync failed: ${error}`);
+              throw new Error(`Supabase sync failed: ${responseText}`);
             }
             
-            console.log(`✅ Synced ${flatTokens.length} tokens to Supabase`);
-            
-            // Log to sync_logs if you have that table
-            await fetch(`${process.env.SUPABASE_URL}/rest/v1/sync_logs`, {
-              method: 'POST',
-              headers: {
-                'apikey': process.env.SUPABASE_KEY,
-                'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                status: 'success',
-                message: `Synced ${flatTokens.length} design tokens`
-              })
-            });
+            console.log(`✅ Successfully synced ${flatTokens.length} tokens to Supabase`);
