@@ -1,0 +1,118 @@
+name: Sync Figma Components to Supabase
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Mondays
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Sync Figma Components
+        uses: actions/github-script@v6
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          FIGMA_FILE_KEY: ${{ secrets.FIGMA_FILE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        with:
+          script: |
+            // Fetch file data from Figma
+            const figmaResponse = await fetch(
+              `https://api.figma.com/v1/files/${process.env.FIGMA_FILE_KEY}`,
+              {
+                headers: {
+                  'X-Figma-Token': process.env.FIGMA_TOKEN
+                }
+              }
+            );
+            
+            if (!figmaResponse.ok) {
+              throw new Error(`Figma API error: ${figmaResponse.statusText}`);
+            }
+            
+            const figmaData = await figmaResponse.json();
+            console.log('Fetched Figma file');
+            
+            // Extract components from the document
+            const components = [];
+            
+            // Figma stores component info in document.components
+            if (figmaData.components) {
+              Object.entries(figmaData.components).forEach(([nodeId, component]) => {
+                components.push({
+                  name: component.name,
+                  figma_node_id: nodeId,
+                  figma_description: component.description || '',
+                  figma_file_url: `https://www.figma.com/file/${process.env.FIGMA_FILE_KEY}?node-id=${nodeId}`,
+                  // Try to extract category from component name or set
+                  category: component.name.includes('/') 
+                    ? component.name.split('/')[0] 
+                    : 'Uncategorized'
+                });
+              });
+            }
+            
+            console.log(`Found ${components.length} components`);
+            
+            if (components.length === 0) {
+              console.log('No components found. Make sure your Figma file has published components.');
+              return;
+            }
+            
+            // Update each component in Supabase
+            for (const component of components) {
+              const response = await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/components?figma_node_id=eq.${component.figma_node_id}`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'apikey': process.env.SUPABASE_KEY,
+                    'Authorization': `Bearer ${process.env.SUPABASE_KEY}`
+                  }
+                }
+              );
+              
+              const existing = await response.json();
+              
+              if (existing.length > 0) {
+                // Update existing component
+                await fetch(
+                  `${process.env.SUPABASE_URL}/rest/v1/components?figma_node_id=eq.${component.figma_node_id}`,
+                  {
+                    method: 'PATCH',
+                    headers: {
+                      'apikey': process.env.SUPABASE_KEY,
+                      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      ...component,
+                      updated_at: new Date().toISOString()
+                    })
+                  }
+                );
+                console.log(`Updated: ${component.name}`);
+              } else {
+                // Insert new component
+                await fetch(
+                  `${process.env.SUPABASE_URL}/rest/v1/components`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'apikey': process.env.SUPABASE_KEY,
+                      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(component)
+                  }
+                );
+                console.log(`Created: ${component.name}`);
+              }
+            }
+            
+            console.log('✅ Component sync complete');
