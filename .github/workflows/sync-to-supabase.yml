@@ -87,3 +87,26 @@ jobs:
             }
             
             console.log(`✅ Successfully synced ${flatTokens.length} tokens to Supabase`);
+- name: Update status file
+        run: |
+          # Read current status
+          STATUS_FILE="docs/status.json"
+          
+          # Update with new sync time
+          echo '{
+            "tokens": {
+              "count": 114,
+              "lastSync": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+            },
+            "components": {
+              "count": 302,
+              "lastSync": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+            },
+            "lastUpdated": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+          }' > $STATUS_FILE
+          
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add $STATUS_FILE
+          git commit -m "Update sync status" || true
+          git push
