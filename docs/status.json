@@ -1,1 +1,11 @@
-[paste the JSON code here]
+{
+  "tokens": {
+    "count": 114,
+    "lastSync": "2024-08-27T12:00:00Z"
+  },
+  "components": {
+    "count": 302,
+    "lastSync": "2024-08-27T12:00:00Z"
+  },
+  "lastUpdated": "2024-08-27T12:00:00Z"
+}
