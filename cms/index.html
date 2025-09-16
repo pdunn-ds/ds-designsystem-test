@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Guidance CMS</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="cms-container">
+        <!-- Header -->
+        <header class="cms-header">
+            <div class="header-content">
+                <h1><i class="fas fa-cube"></i> Component Guidance CMS</h1>
+                <div class="header-actions">
+                    <button id="refreshBtn" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button id="addComponentBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Component
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading components...</p>
+        </div>
+
+        <!-- Main Content -->
+        <main class="cms-main" id="mainContent" style="display: none;">
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filters">
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">All Categories</option>
+                        <option value="Actions">Actions</option>
+                        <option value="Forms">Forms</option>
+                        <option value="Layout">Layout</option>
+                        <option value="Feedback">Feedback</option>
+                        <option value="Navigation">Navigation</option>
+                        <option value="Data">Data</option>
+                        <option value="Overlay">Overlay</option>
+                        <option value="Status">Status</option>
+                        <option value="Help">Help</option>
+                    </select>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="Published">Published</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Review">Review</option>
+                    </select>
+                    <input type="search" id="searchInput" placeholder="Search components..." class="search-input">
+                </div>
+            </div>
+
+            <!-- Components Grid -->
+            <div class="components-grid" id="componentsGrid">
+                <!-- Components will be loaded here -->
+            </div>
+        </main>
+
+        <!-- Component Modal -->
+        <div id="componentModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Edit Component</h2>
+                    <button id="closeModal" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="componentForm" class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="componentName">Component Name *</label>
+                            <input type="text" id="componentName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="figmaNodeId">Figma Node ID</label>
+                            <input type="text" id="figmaNodeId" placeholder="e.g., 123:456">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="category">Category *</label>
+                            <select id="category" required>
+                                <option value="">Select category</option>
+                                <option value="Actions">Actions</option>
+                                <option value="Forms">Forms</option>
+                                <option value="Layout">Layout</option>
+                                <option value="Feedback">Feedback</option>
+                                <option value="Navigation">Navigation</option>
+                                <option value="Data">Data</option>
+                                <option value="Overlay">Overlay</option>
+                                <option value="Status">Status</option>
+                                <option value="Help">Help</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status">Status *</label>
+                            <select id="status" required>
+                                <option value="Draft">Draft</option>
+                                <option value="Review">Review</option>
+                                <option value="Published">Published</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="usageGuidelines">Usage Guidelines *</label>
+                        <textarea id="usageGuidelines" rows="3" placeholder="When and how to use this component..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contentGuidelines">Content Guidelines *</label>
+                        <textarea id="contentGuidelines" rows="3" placeholder="How to write content for this component..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="voiceTone">Voice & Tone</label>
+                        <input type="text" id="voiceTone" placeholder="e.g., Direct, helpful, encouraging">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dos">Do's</label>
+                            <textarea id="dos" rows="3" placeholder="Best practices (separate with | for multiple items)"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="donts">Don'ts</label>
+                            <textarea id="donts" rows="3" placeholder="Things to avoid (separate with | for multiple items)"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contentExamples">Content Examples</label>
+                        <textarea id="contentExamples" rows="2" placeholder="Example content for this component"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="characterLimits">Character Limits</label>
+                            <input type="text" id="characterLimits" placeholder="e.g., 5-50 characters recommended">
+                        </div>
+                        <div class="form-group">
+                            <label for="updatedBy">Updated By</label>
+                            <input type="text" id="updatedBy" placeholder="Your name">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accessibilityNotes">Accessibility Notes</label>
+                        <textarea id="accessibilityNotes" rows="2" placeholder="Screen reader considerations, keyboard navigation, etc."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" id="deleteBtn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                        <div class="modal-actions">
+                            <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="messageContainer" class="message-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
